@@ -42,6 +42,7 @@ extern "C" {
 	extern bool check_signatures(const Signature* a, const Signature* b);
 	extern param_type_e get_return_type(uint16_t encoded);
 	extern int get_num_params(uint16_t encoded);
+	extern void PrintEnums(const char* filename, const char* prefix, int maxParamCount);
 #ifdef __cplusplus
 }
 #endif

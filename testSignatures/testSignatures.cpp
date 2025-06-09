@@ -55,5 +55,6 @@ int main()
 		assert(check_signatures(&s_in, &s_out));
 		index++;
 	} 
+	PrintEnums("TestEnums.txt", "MH_TEST", 6);
 	return 0;
 }

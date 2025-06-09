@@ -95,3 +95,78 @@ bool check_signatures(const Signature* a, const Signature* b)
     }
     return true;
 }
+
+/* print a signature in an enum declaration friendly manner*/
+void fprint_signature_enum(FILE* out, const char* prefix, Signature* sig)
+{
+    uint16_t encoded = encode_signature(sig->params, sig->paramCount, sig->returnType);
+    fprintf(out, "%s_", prefix);
+    if(!sig->paramCount)
+        fprintf(out, "V");
+    for (int i = 0; i < sig->paramCount; i++)
+        fprintf(out, "%d", sig->params[i]);
+    if(sig->returnType == VOID)
+        fprintf(out, "_V");
+    else 
+        fprintf(out, "_%d", sig->returnType);
+    fprintf(out, " = %d,\n", encoded);
+}
+
+void fprint_signature_case(FILE* out, const char* prefix, Signature* sig)
+{
+    uint16_t encoded = encode_signature(sig->params, sig->paramCount, sig->returnType);
+    fprintf(out, "case %s_", prefix);
+    if (!sig->paramCount)
+        fprintf(out, "V");
+    for (int i = 0; i < sig->paramCount; i++)
+        fprintf(out, "%d", sig->params[i]);
+    if (sig->returnType == VOID)
+        fprintf(out, "_V");
+    else
+        fprintf(out, "_%d", sig->returnType);
+    fprintf(out, ":\n", encoded);
+}
+typedef void (*printFn)(FILE*, const char*, Signature*);
+
+void fprint_enums_for_param_count(FILE* out, const char* prefix, int paramCount, printFn printFunction)
+{    
+    // for each permutation of 4 or 8 byte parameters output a VOID, 4 and 8 output 
+    int perms = 1 << paramCount; // 2^X permutations
+    Signature sigs[3];
+    for (int i = 0; i < 3; i++)
+        sigs[i].paramCount = paramCount;
+    sigs[0].returnType = VOID;
+    sigs[1].returnType = I4;
+    sigs[2].returnType = I8;
+    for (int sigIndex = 0; sigIndex < 3; sigIndex++)
+    {
+        Signature* sig = &(sigs[sigIndex]);
+        /* the set of integers from 0 to numPerms contains the bitfields with each permutation of 1 and 0 up to that numPerms. */
+        for (int i = 0; i < perms; ++i) {
+            for (int j = 0; j < paramCount; ++j) {
+                sig->params[j] = (i & (1 << (paramCount - j - 1))) ? 8 : 4;
+            }                        
+            printFunction(out, prefix, sig);
+        }        
+    }
+}
+void PrintEnums(const char* filename, const char* prefix, int maxParamCount)
+{
+    FILE* out = fopen(filename, "w");
+    if (!out)
+        return;
+    fprintf(out, "ENUM_DEFINITION {\n");
+    for (int i = 0; i <= maxParamCount; i++)
+    {
+        fprint_enums_for_param_count(out, prefix, i, fprint_signature_enum);
+    }
+    fprintf(out, "}\n");
+    fprintf(out, "// useful for switch statements\n");
+    fprintf(out, "{\n");
+    for (int i = 0; i <= maxParamCount; i++)
+    {
+        fprint_enums_for_param_count(out, prefix, i, fprint_signature_case);
+    }
+    fprintf(out, "}\n");
+    fclose(out);
+}
