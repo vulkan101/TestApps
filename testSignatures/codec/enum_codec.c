@@ -124,8 +124,19 @@ void fprint_signature_case(FILE* out, const char* prefix, Signature* sig)
         fprintf(out, "_V");
     else
         fprintf(out, "_%d", sig->returnType);
-    fprintf(out, ":\n", encoded);
+    fprintf(out, ":\n");
 }
+
+static void CheckSignature(Signature* s_in)
+{
+    Signature s_out;
+    uint16_t encoded = encode_signature(s_in->params, s_in->paramCount, s_in->returnType);
+    decode_signature(encoded, s_out.params, &s_out.paramCount, &s_out.returnType);
+    assert(get_num_params(encoded) == s_out.paramCount);
+    assert(get_return_type(encoded) == s_out.returnType);
+    assert(check_signatures(s_in, &s_out));
+}
+
 typedef void (*printFn)(FILE*, const char*, Signature*);
 
 void fprint_enums_for_param_count(FILE* out, const char* prefix, int paramCount, printFn printFunction)
@@ -145,11 +156,14 @@ void fprint_enums_for_param_count(FILE* out, const char* prefix, int paramCount,
         for (int i = 0; i < perms; ++i) {
             for (int j = 0; j < paramCount; ++j) {
                 sig->params[j] = (i & (1 << (paramCount - j - 1))) ? 8 : 4;
-            }                        
+            }                                      
             printFunction(out, prefix, sig);
+            CheckSignature(sig);
         }        
     }
 }
+
+
 void PrintEnums(const char* filename, const char* prefix, int maxParamCount)
 {
     FILE* out = fopen(filename, "w");
