@@ -23,12 +23,12 @@ param_type_e get_return_type(uint16_t encoded)
     uint16_t ret_code = encoded & 0b11;
     switch (ret_code)
     {
-    case ENCODE_0: return VOID; 
-    case ENCODE_I4: return I4; 
-    case ENCODE_I8: return I8; 
+    case ENCODE_0: return SIG_PARAM_VOID;
+    case ENCODE_I4: return SIG_PARAM_I4;
+    case ENCODE_I8: return SIG_PARAM_I8;
     default: assert(false);
     }    
-    return INVALID;
+    return SIG_PARAM_INVALID;
 }
 
 

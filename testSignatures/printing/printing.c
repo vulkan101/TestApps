@@ -18,17 +18,17 @@ static void fprint_signature_fn_call(FILE* out, InterpInternalSignature* sig)
 {
     fprintf(out, "\ttypedef ");
     // return type
-    if (sig->returnType == VOID)
+    if (sig->returnType == SIG_PARAM_VOID)
         fprintf(out, "void ");
     else
-        fprintf(out, "%s ", sig->returnType == I8 ? "I8" : "I4");
+        fprintf(out, "%s ", sig->returnType == SIG_PARAM_I8 ? "I8" : "I4");
     fprintf(out, "(*T)(");
     // parameter types
     if (!sig->paramCount)
         fprintf(out, "void");
     for (int i = 0; i < sig->paramCount; i++)
     {
-        fprintf(out, "%s", sig->params[i] == I8 ? "I8" : "I4");
+        fprintf(out, "%s", sig->params[i] == SIG_PARAM_I8 ? "I8" : "I4");
         if (i < sig->paramCount - 1)
             fprintf(out, ",");
     }
@@ -36,14 +36,14 @@ static void fprint_signature_fn_call(FILE* out, InterpInternalSignature* sig)
     // cast provided ptr to this function pointer
     fprintf(out, "\tT func = (T)ptr;\n");
     // call the function
-    if (sig->returnType == VOID)
+    if (sig->returnType == SIG_PARAM_VOID)
         fprintf(out, "\tfunc (");
     else
-        fprintf(out, "\tret_sp->data.p = %sfunc (", sig->returnType == I8 ? "" : "(I8)");
+        fprintf(out, "\tret_sp->data.p = %sfunc(", sig->returnType == SIG_PARAM_I8 ? "" : "(I4)");
     // params
     for (int i = 0; i < sig->paramCount; i++)
     {
-        fprintf(out, "%ssp[%d].data.p", sig->params[i] == I8 ? "" : "(I4)", i);
+        fprintf(out, "%ssp[%d].data.p", sig->params[i] == SIG_PARAM_I8 ? "" : "(I4)", i);
         if (i < sig->paramCount - 1)
             fprintf(out, ",");
     }
@@ -60,7 +60,7 @@ static void fprint_signature_enum(FILE* out, const char* prefix, InterpInternalS
         fprintf(out, "V");
     for (int i = 0; i < sig->paramCount; i++)
         fprintf(out, "%d", sig->params[i]);
-    if (sig->returnType == VOID)
+    if (sig->returnType == SIG_PARAM_VOID)
         fprintf(out, "_V");
     else
         fprintf(out, "_%d", sig->returnType);
@@ -75,7 +75,7 @@ static void fprint_signature_case(FILE* out, const char* prefix, InterpInternalS
         fprintf(out, "V");
     for (int i = 0; i < sig->paramCount; i++)
         fprintf(out, "%d", sig->params[i]);
-    if (sig->returnType == VOID)
+    if (sig->returnType == SIG_PARAM_VOID)
         fprintf(out, "_V");
     else
         fprintf(out, "_%d", sig->returnType);
@@ -90,7 +90,7 @@ void fprint_signature_case_with_fn_call(FILE* out, const char* prefix, InterpInt
         fprintf(out, "V");
     for (int i = 0; i < sig->paramCount; i++)
         fprintf(out, "%d", sig->params[i]);
-    if (sig->returnType == VOID)
+    if (sig->returnType == SIG_PARAM_VOID)
         fprintf(out, "_V");
     else
         fprintf(out, "_%d", sig->returnType);
@@ -107,9 +107,9 @@ void fprint_enums_for_param_count(FILE* out, const char* prefix, int paramCount,
     InterpInternalSignature sigs[3];
     for (int i = 0; i < 3; i++)
         sigs[i].paramCount = paramCount;
-    sigs[0].returnType = VOID;
-    sigs[1].returnType = I4;
-    sigs[2].returnType = I8;
+    sigs[0].returnType = SIG_PARAM_VOID;
+    sigs[1].returnType = SIG_PARAM_I4;
+    sigs[2].returnType = SIG_PARAM_I8;
     for (int sigIndex = 0; sigIndex < 3; sigIndex++)
     {
         InterpInternalSignature* sig = &(sigs[sigIndex]);
@@ -130,19 +130,21 @@ void print_enums(const char* filename, const char* prefix, int maxParamCount)
     FILE* out = fopen(filename, "w");
     if (!out)
         return;
-    fprintf(out, "ENUM_DEFINITION {\n");
+    fprintf(out, "#ifndef MINTSIGNATURES\n");
+    fprintf(out, "typedef enum {\n");
     for (int i = 0; i <= maxParamCount; i++)
     {
         fprint_enums_for_param_count(out, prefix, i, fprint_signature_enum);
     }
-    fprintf(out, "}\n");
-    fprintf(out, "// useful for switch statements\n");
-    fprintf(out, "{\n");
-    for (int i = 0; i <= maxParamCount; i++)
-    {
-        fprint_enums_for_param_count(out, prefix, i, fprint_signature_case);
-    }
-    fprintf(out, "}\n");
+    fprintf(out, "} MintICallSig;\n");
+    fprintf(out, "#endif\n");
+    //fprintf(out, "// useful for switch statements\n");
+    //fprintf(out, "{\n");
+    //for (int i = 0; i <= maxParamCount; i++)
+    //{
+    //    fprint_enums_for_param_count(out, prefix, i, fprint_signature_case);
+    //}
+    //fprintf(out, "}\n");
     fclose(out);
 }
 
@@ -151,7 +153,14 @@ void print_function_calls(const char* filename, const char* prefix, int maxParam
     FILE* out = fopen(filename, "w");
     if (!out)
         return;
-    fprintf(out, "switch (op) {\n");
+    fprintf(out, "typedef gpointer I8;\n");
+    fprintf(out, "typedef uint32_t I4;\n");    
+    fprintf(out, "void do_icall(MonoMethodSignature * sig, MintICallSig op, stackval * ret_sp, stackval * sp, gpointer ptr, gboolean save_last_error)\n");
+    fprintf(out, "{\n");
+	fprintf(out, "if (save_last_error)\n");
+	fprintf(out, "mono_marshal_clear_last_error();\n");
+	fprintf(out, "MH_LOG(\"About to execute function, sig enum value is : %%d\", op);\n");
+	fprintf(out, "switch (op) {\n");
     for (int i = 0; i <= maxParamCount; i++)
     {
         fprint_enums_for_param_count(out, prefix, i, fprint_signature_case_with_fn_call);
@@ -160,5 +169,21 @@ void print_function_calls(const char* filename, const char* prefix, int maxParam
     fprintf(out, "    g_assert_not_reached();\n");
     fprintf(out, "}\n");
 
+    fprintf(out, "if (save_last_error)\n");
+    fprintf(out, "{\n");
+    fprintf(out, "    MH_LOG(\"Setting last error\");\n");
+    fprintf(out, "    mono_marshal_set_last_error();\n");
+    fprintf(out, "}\n");
+    fprintf(out, "/* convert the native representation to the stackval representation */\n");
+    fprintf(out, "if (sig)\n");
+    fprintf(out, "{\n");
+    fprintf(out, "    MH_LOG(\"Setting stackval from data\");\n");
+    fprintf(out, "    stackval_from_data(sig->ret, ret_sp, (char*)&ret_sp->data.p, sig->pinvoke && !sig->marshalling_disabled);\n");
+    fprintf(out, "    MH_LOG(\"Set stackval from data\");\n");
+    fprintf(out, "}\n");
+    fprintf(out, "else\n");
+    fprintf(out, "    MH_LOG(\"Not trying to set stackval from data - no sig\");\n");
+
+    fprintf(out, "}\n");
     fclose(out);
 }

@@ -1,21 +1,20 @@
 #ifndef ENUM_CODEC_
 #define ENUM_CODEC_
 
-#include "../utils/utils.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stdint.h>
+#include "../utils/utils.h"
 
 #define MAX_SIG_PARAMS 6
 
-	typedef enum  {
-		VOID = 0,
-		I4 = 4,
-		I8 = 8,
-		INVALID = 666
+	typedef enum {
+		SIG_PARAM_VOID = 0,
+		SIG_PARAM_I4 = 4,
+		SIG_PARAM_I8 = 8,
+		SIG_PARAM_INVALID = 666
 	} param_type_e;
 
 	typedef struct
