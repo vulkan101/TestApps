@@ -1,15 +1,15 @@
 ﻿// testSignatures.cpp : Defines the entry point for the application.
 //
+#include <assert.h>
 
 #include "testSignatures.h"
 #include "codec/enum_codec.h"
-#include <assert.h>
-
+#include "printing/printing.h"
 using namespace std;
 
 int main()
 {		
-	Signature tests[]{
+	InterpInternalSignature tests[]{
 		{VOID, 0, {}},
 		{VOID, 1, {I8}},
 		{VOID, 1, {I4}},
@@ -34,16 +34,15 @@ int main()
 		{I4, 6, {I8, I4, I8, I4, I8, I8}},
 		{I8, 6, {I8, I4, I8, I4, I8, I8}},
 		{I4, 6, {I8, I4, I8, I4, I8, I8}},
-
 		{INVALID}
 	};
 	int index = 0;	
 	while (true)
 	{
-		Signature s_in = tests[index];
+		InterpInternalSignature s_in = tests[index];
 		if (s_in.returnType == INVALID)
 			break;
-		Signature s_out{};
+		InterpInternalSignature s_out{};
 		print_signature("Signature_in", &s_in);
 		uint16_t encoded = encode_signature(s_in.params, s_in.paramCount, s_in.returnType);
 		printf("Got encoded value: %d\n", encoded);
@@ -55,6 +54,7 @@ int main()
 		assert(check_signatures(&s_in, &s_out));
 		index++;
 	} 
-	PrintEnums("TestEnums.txt", "MH_TEST", 6);
+	print_enums("mintSigs.h", "MINT_ICALLSIG", 6);
+	print_function_calls("interp-icalls.c", "MINT_ICALLSIG", 6);
 	return 0;
 }
