@@ -37,9 +37,9 @@ static void fprint_signature_fn_call(FILE* out, InterpInternalSignature* sig)
     fprintf(out, "\tT func = (T)ptr;\n");
     // call the function
     if (sig->returnType == SIG_PARAM_VOID)
-        fprintf(out, "\tfunc (");
-    else
-        fprintf(out, "\tret_sp->data.p = %sfunc(", sig->returnType == SIG_PARAM_I8 ? "" : "(I4)");
+        fprintf(out, "\tfunc(");
+    else   
+        fprintf(out, "\tret_sp->data.p = %sfunc(", sig->returnType == SIG_PARAM_I8 ? "" : "(I8)");
     // params
     for (int i = 0; i < sig->paramCount; i++)
     {
